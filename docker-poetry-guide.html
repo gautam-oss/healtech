@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker + Poetry (No venv) — Complete Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --accent4: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 80px 40px 60px;
+    background: linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; left: -100px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 4px 12px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+  }
+
+  .hero h1 span.accent { color: var(--accent); }
+  .hero h1 span.accent2 { color: var(--accent2); }
+
+  .hero-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 600px;
+    margin-bottom: 36px;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+
+  .badge.b1 { color: var(--accent); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.05); }
+  .badge.b2 { color: var(--accent2); border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.05); }
+  .badge.b3 { color: var(--accent3); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); }
+  .badge.b4 { color: var(--accent4); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.05); }
+
+  /* LAYOUT */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+  /* SECTION */
+  .section {
+    padding: 56px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .section h2 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+  }
+
+  .section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+
+  .section p {
+    color: #94a3b8;
+    margin-bottom: 16px;
+    line-height: 1.8;
+  }
+
+  /* ARCHITECTURE DIAGRAM */
+  .arch-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    margin: 24px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arch-diagram::before {
+    content: 'ARCHITECTURE';
+    position: absolute;
+    top: 12px; right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .layer {
+    border: 1px solid;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 2px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .layer-host {
+    border-color: rgba(100,116,139,0.4);
+    background: rgba(100,116,139,0.04);
+    margin-bottom: 0;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .layer-docker {
+    border-color: rgba(0,212,255,0.3);
+    background: rgba(0,212,255,0.03);
+    margin: 0 16px;
+    border-radius: 0;
+  }
+
+  .layer-python {
+    border-color: rgba(124,58,237,0.4);
+    background: rgba(124,58,237,0.04);
+    margin: 0 32px;
+    border-radius: 0;
+  }
+
+  .layer-app {
+    border-color: rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.04);
+    margin: 0 48px;
+    border-radius: 6px;
+  }
+
+  .layer-bottom-cap {
+    height: 8px;
+    margin: 0 16px;
+    border: 1px solid rgba(0,212,255,0.3);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background: rgba(0,212,255,0.03);
+  }
+
+  .layer-host-cap {
+    height: 8px;
+    border: 1px solid rgba(100,116,139,0.4);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background: rgba(100,116,139,0.04);
+  }
+
+  .layer-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .layer-icon.host { background: rgba(100,116,139,0.15); }
+  .layer-icon.docker { background: rgba(0,212,255,0.1); }
+  .layer-icon.python { background: rgba(124,58,237,0.12); }
+  .layer-icon.app { background: rgba(16,185,129,0.12); }
+
+  .layer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .layer-label.host { color: var(--muted); }
+  .layer-label.docker { color: var(--accent); }
+  .layer-label.python { color: var(--accent2); }
+  .layer-label.app { color: var(--accent3); }
+
+  .layer-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .no-venv-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 32px;
+    padding: 8px 16px;
+    background: rgba(239,68,68,0.05);
+    border: 1px dashed rgba(239,68,68,0.3);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #f87171;
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-filename {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .code-filename .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  pre {
+    padding: 20px 20px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* SYNTAX COLORS */
+  .c-comment { color: #4a5568; }
+  .c-keyword { color: #7c3aed; }
+  .c-string { color: #10b981; }
+  .c-value { color: var(--accent); }
+  .c-cmd { color: #f59e0b; }
+  .c-line-num { color: #2d3748; user-select: none; margin-right: 16px; display: inline-block; width: 24px; text-align: right; }
+  .c-highlight { background: rgba(0,212,255,0.05); display: block; margin: 0 -20px; padding: 0 20px; border-left: 2px solid var(--accent); }
+  .c-warn { background: rgba(239,68,68,0.05); display: block; margin: 0 -20px; padding: 0 20px; border-left: 2px solid var(--danger); }
+
+  /* CALLOUT */
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: 6px;
+    margin: 20px 0;
+    border: 1px solid;
+  }
+
+  .callout.info {
+    background: rgba(0,212,255,0.04);
+    border-color: rgba(0,212,255,0.2);
+  }
+
+  .callout.warn {
+    background: rgba(245,158,11,0.04);
+    border-color: rgba(245,158,11,0.25);
+  }
+
+  .callout.danger {
+    background: rgba(239,68,68,0.04);
+    border-color: rgba(239,68,68,0.25);
+  }
+
+  .callout.success {
+    background: rgba(16,185,129,0.04);
+    border-color: rgba(16,185,129,0.2);
+  }
+
+  .callout-icon { font-size: 16px; flex-shrink: 0; line-height: 1.7; }
+  .callout-body { font-size: 13.5px; color: #94a3b8; line-height: 1.7; }
+  .callout-body strong { color: var(--text); font-weight: 600; }
+
+  /* STEP */
+  .steps { counter-reset: step; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 0 20px;
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .step::before {
+    content: '';
+    position: absolute;
+    left: 21px;
+    top: 44px;
+    bottom: -40px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .step:last-child::before { display: none; }
+
+  .step-num {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  .step-num.active {
+    background: var(--accent);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  .step-num.warn {
+    background: var(--accent4);
+    color: #000;
+    box-shadow: 0 0 20px rgba(245,158,11,0.2);
+  }
+
+  .step-content h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    padding-top: 10px;
+    color: var(--text);
+  }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 13px;
+  }
+
+  .compare-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .compare-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: #94a3b8;
+    vertical-align: top;
+  }
+
+  .compare-table tr:last-child td { border-bottom: none; }
+
+  .compare-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .yes { color: var(--accent3) !important; font-weight: 600; }
+  .no { color: var(--danger) !important; }
+  .partial { color: var(--accent4) !important; }
+
+  /* SERVICES GRID */
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .service-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .service-card:hover { border-color: rgba(0,212,255,0.3); }
+
+  .service-card .s-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .service-card .s-image {
+    font-size: 11px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 6px;
+  }
+
+  .service-card .s-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* PROS/CONS */
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  @media (max-width: 600px) { .pros-cons { grid-template-columns: 1fr; } }
+
+  .pros, .cons {
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid;
+  }
+
+  .pros {
+    background: rgba(16,185,129,0.03);
+    border-color: rgba(16,185,129,0.2);
+  }
+
+  .cons {
+    background: rgba(239,68,68,0.03);
+    border-color: rgba(239,68,68,0.2);
+  }
+
+  .pros h4, .cons h4 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .pros h4 { color: var(--accent3); }
+  .cons h4 { color: var(--danger); }
+
+  .pros ul, .cons ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pros li, .cons li {
+    font-size: 13px;
+    color: #94a3b8;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .pros li::before {
+    content: '✓';
+    color: var(--accent3);
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .cons li::before {
+    content: '✕';
+    color: var(--danger);
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* INLINE CODE */
+  .ic {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: rgba(0,212,255,0.07);
+    color: var(--accent);
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,212,255,0.15);
+  }
+
+  /* FLOW DIAGRAM */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 20px 0;
+  }
+
+  .flow-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .flow-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 32px;
+  }
+
+  .flow-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .flow-dot.d1 { background: rgba(0,212,255,0.15); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+  .flow-dot.d2 { background: rgba(124,58,237,0.15); color: var(--accent2); border: 1px solid rgba(124,58,237,0.3); }
+  .flow-dot.d3 { background: rgba(16,185,129,0.15); color: var(--accent3); border: 1px solid rgba(16,185,129,0.3); }
+  .flow-dot.d4 { background: rgba(245,158,11,0.15); color: var(--accent4); border: 1px solid rgba(245,158,11,0.3); }
+  .flow-dot.d5 { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+  .flow-line {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+  }
+
+  .flow-content {
+    padding: 5px 0 24px;
+    flex: 1;
+  }
+
+  .flow-content h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .flow-content p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+
+  /* FOOTER */
+  .footer {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    border-top: 1px solid var(--border);
+  }
+
+  .section:nth-child(odd) { background: transparent; }
+  .section:nth-child(even) { background: rgba(17, 24, 39, 0.4); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-tag">Approach 4 Variant</div>
+    <h1>
+      <span class="accent">Docker</span> +
+      <span class="accent2">Poetry</span><br>
+      Without virtualenv
+    </h1>
+    <p class="hero-sub">
+      A detailed guide to running Django inside Docker using Poetry for dependency management,
+      with <code class="ic">virtualenvs.create false</code> — letting the container itself serve as the isolation layer.
+    </p>
+    <div class="badge-row">
+      <span class="badge b1">Docker Compose</span>
+      <span class="badge b2">Poetry 2.x</span>
+      <span class="badge b3">Django 5+</span>
+      <span class="badge b4">No venv inside container</span>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 1: CONCEPT -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">01 / Concept</div>
+    <h2>What is this approach & why use it?</h2>
+
+    <p>
+      In a standard Python project, you'd create a virtual environment to isolate dependencies.
+      But when your project already runs inside a Docker container, that container
+      <strong>is</strong> the isolated environment — it has its own filesystem, Python binary, and packages.
+      Adding a venv inside it adds friction with no real benefit.
+    </p>
+
+    <p>
+      This approach tells Poetry: <em>"don't create a venv — just install packages directly into
+      the system Python inside this container."</em> The result is a simpler, faster,
+      more ergonomic workflow.
+    </p>
+
+    <!-- Architecture Diagram -->
+    <div class="arch-diagram">
+      <div class="layer layer-host">
+        <div class="layer-icon host">🖥</div>
+        <span class="layer-label host">Host Machine (WSL / Linux)</span>
+        <span class="layer-desc">Ubuntu, macOS, Windows</span>
+      </div>
+      <div class="layer layer-docker">
+        <div class="layer-icon docker">🐳</div>
+        <span class="layer-label docker">Docker Container (python:3.12-slim)</span>
+        <span class="layer-desc">OS isolation</span>
+      </div>
+      <div class="no-venv-note" style="margin: 0 32px;">
+        ⛔ &nbsp; <span>NO virtualenv created — Poetry installs directly into system Python</span>
+      </div>
+      <div class="layer layer-python" style="margin-top: 2px;">
+        <div class="layer-icon python">🐍</div>
+        <span class="layer-label python">System Python 3.12 + Poetry-installed packages</span>
+        <span class="layer-desc">/usr/local/lib/python3.12/</span>
+      </div>
+      <div class="layer layer-app">
+        <div class="layer-icon app">⚡</div>
+        <span class="layer-label app">Your Django Application</span>
+        <span class="layer-desc">/home/user/app/backend/</span>
+      </div>
+      <div class="layer-bottom-cap"></div>
+      <div class="layer-host-cap"></div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <strong>Key insight:</strong> Docker containers are immutable by design. Each container
+        gets its own isolated Python environment from the image. There's no risk of package
+        conflicts between projects — each project has its own image.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: COMPARISON -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">02 / Comparison</div>
+    <h2>How it differs from other approaches</h2>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Global deps</th>
+          <th>venv only</th>
+          <th>Docker only</th>
+          <th>Docker + venv</th>
+          <th>Docker + Poetry ← You</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Python isolation</td>
+          <td class="no">None</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes ×2</td>
+          <td class="yes">Yes (system)</td>
+        </tr>
+        <tr>
+          <td>OS isolation</td>
+          <td class="no">No</td>
+          <td class="no">No</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+        </tr>
+        <tr>
+          <td>Lock file</td>
+          <td class="no">No</td>
+          <td class="partial">requirements.txt</td>
+          <td class="partial">requirements.txt</td>
+          <td class="partial">requirements.txt</td>
+          <td class="yes">poetry.lock</td>
+        </tr>
+        <tr>
+          <td>Dep resolution</td>
+          <td class="no">Manual</td>
+          <td class="no">Manual</td>
+          <td class="no">Manual</td>
+          <td class="no">Manual</td>
+          <td class="yes">Automatic</td>
+        </tr>
+        <tr>
+          <td>Dev/prod groups</td>
+          <td class="no">No</td>
+          <td class="no">No</td>
+          <td class="no">No</td>
+          <td class="no">No</td>
+          <td class="yes">Yes</td>
+        </tr>
+        <tr>
+          <td>Team onboarding</td>
+          <td class="no">Manual</td>
+          <td class="partial">Semi-manual</td>
+          <td class="yes">compose up</td>
+          <td class="yes">compose up</td>
+          <td class="yes">compose up</td>
+        </tr>
+        <tr>
+          <td>Added complexity</td>
+          <td class="yes">None</td>
+          <td class="yes">Low</td>
+          <td class="partial">Medium</td>
+          <td class="no">Higher</td>
+          <td class="partial">Medium</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SECTION 3: PROJECT STRUCTURE -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">03 / Project Structure</div>
+    <h2>Expected file layout</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>project layout</span>
+        <span class="code-lang">tree</span>
+      </div>
+      <pre><span class="c-value">myproject/</span>
+├── <span class="c-keyword">backend/</span>
+│   ├── <span class="c-cmd">Dockerfile</span>          <span class="c-comment"># ← backend image definition</span>
+│   ├── <span class="c-string">manage.py</span>
+│   ├── <span class="c-string">.env</span>
+│   ├── <span class="c-string">.env.example</span>
+│   └── <span class="c-value">myapp/</span>
+│       └── <span class="c-string">settings/</span>
+│           ├── <span class="c-string">base.py</span>
+│           ├── <span class="c-string">local.py</span>
+│           └── <span class="c-string">production.py</span>
+├── <span class="c-keyword">frontend/</span>
+│   └── <span class="c-cmd">Dockerfile</span>          <span class="c-comment"># ← frontend image definition</span>
+├── <span class="c-cmd">docker-compose.yml</span>      <span class="c-comment"># ← multi-service orchestration</span>
+├── <span class="c-cmd">pyproject.toml</span>          <span class="c-comment"># ← Poetry config (root level)</span>
+└── <span class="c-cmd">poetry.lock</span>             <span class="c-comment"># ← exact locked versions</span></pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <strong>Important:</strong> <span class="ic">pyproject.toml</span> and <span class="ic">poetry.lock</span>
+        sit at the <strong>root</strong> of the project, not inside <span class="ic">backend/</span>.
+        The Dockerfile copies them from the project root, not from the backend directory.
+        This is a deliberate Vinta/HealTech convention.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4: PYPROJECT.TOML -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">04 / Poetry Config</div>
+    <h2>pyproject.toml — dependency declaration</h2>
+
+    <p>
+      Poetry replaces <span class="ic">requirements.txt</span> with a structured
+      <span class="ic">pyproject.toml</span>. You declare dependencies with version
+      constraints and Poetry resolves and locks exact versions in <span class="ic">poetry.lock</span>.
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>pyproject.toml</span>
+        <span class="code-lang">TOML</span>
+      </div>
+      <pre><span class="c-comment"># Project metadata</span>
+[tool.poetry]
+name = <span class="c-string">"myproject"</span>
+version = <span class="c-string">"0.1.0"</span>
+description = <span class="c-string">"Django project"</span>
+package-mode = <span class="c-value">false</span>    <span class="c-comment"># not a Python package, just an app</span>
+
+<span class="c-comment"># Runtime dependencies (go into production image)</span>
+[tool.poetry.dependencies]
+python = <span class="c-string">"^3.12"</span>
+Django = <span class="c-string">"^5.2"</span>
+djangorestframework = <span class="c-string">"^3.16"</span>
+psycopg = <span class="c-string">"^3.3"</span>               <span class="c-comment"># PostgreSQL driver</span>
+celery = <span class="c-string">"^5.6"</span>
+gunicorn = <span class="c-string">"^25.1"</span>
+python-decouple = <span class="c-string">"^3.8"</span>       <span class="c-comment"># reads .env files</span>
+dj-database-url = <span class="c-string">"^3.1"</span>       <span class="c-comment"># DATABASE_URL parsing</span>
+whitenoise = <span class="c-string">"^6.12"</span>           <span class="c-comment"># static file serving</span>
+sentry-sdk = <span class="c-string">"^2.54"</span>
+
+<span class="c-comment"># Dev-only dependencies (only in dev image, excluded from prod)</span>
+[tool.poetry.group.dev.dependencies]
+coverage = <span class="c-string">"^7.13"</span>
+model-bakery = <span class="c-string">"^1.23"</span>          <span class="c-comment"># test factories</span>
+pre-commit = <span class="c-string">"^4.5"</span>
+ruff = <span class="c-string">"^0.15"</span>                  <span class="c-comment"># linting + formatting</span>
+
+[build-system]
+requires = [<span class="c-string">"poetry-core>=1.2.0"</span>]
+build-backend = <span class="c-string">"poetry.core.masonry.api"</span></pre>
+    </div>
+
+    <h3>Key Poetry commands</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>poetry commands</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="c-comment"># Add a new dependency</span>
+poetry add djangorestframework
+
+<span class="c-comment"># Add dev-only dependency</span>
+poetry add --group dev pytest-django
+
+<span class="c-comment"># Remove a dependency</span>
+poetry remove requests
+
+<span class="c-comment"># Update all dependencies</span>
+poetry update
+
+<span class="c-comment"># Update one package</span>
+poetry update django
+
+<span class="c-comment"># Show what's installed</span>
+poetry show
+
+<span class="c-comment"># Show dependency tree</span>
+poetry show --tree</pre>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5: DOCKERFILE -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">05 / Dockerfile</div>
+    <h2>backend/Dockerfile — annotated</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>backend/Dockerfile</span>
+        <span class="code-lang">dockerfile</span>
+      </div>
+      <pre><span class="c-comment"># Start from official slim Python image (smaller than full)</span>
+<span class="c-keyword">FROM</span> python:3.12-slim
+
+<span class="c-comment"># Python environment tuning</span>
+<span class="c-keyword">ENV</span> <span class="c-value">PYTHONFAULTHANDLER</span>=1 \
+  <span class="c-comment"># Show crash tracebacks on segfault</span>
+  <span class="c-value">PYTHONUNBUFFERED</span>=1 \
+  <span class="c-comment"># Don't buffer stdout/stderr — logs appear immediately</span>
+  <span class="c-value">PYTHONHASHSEED</span>=random \
+  <span class="c-comment"># Randomise hash seed for security</span>
+  <span class="c-value">PIP_NO_CACHE_DIR</span>=off \
+  <span class="c-comment"># Don't cache pip downloads (keeps image lean)</span>
+  <span class="c-value">PIP_DISABLE_PIP_VERSION_CHECK</span>=on \
+  <span class="c-value">PIP_DEFAULT_TIMEOUT</span>=100 \
+  <span class="c-value">POETRY_VERSION</span>=2.0.1
+  <span class="c-comment"># Pin Poetry version for reproducibility</span>
+
+<span class="c-comment"># Create a non-root user for security</span>
+<span class="c-keyword">RUN</span> groupadd user && useradd --create-home --home-dir /home/user -g user user
+
+<span class="c-comment"># Install system build dependencies</span>
+<span class="c-comment"># python3-dev + gcc = compile C extensions (e.g. psycopg)</span>
+<span class="c-comment"># libpq-dev = PostgreSQL headers needed by psycopg</span>
+<span class="c-keyword">RUN</span> apt-get update && apt-get install python3-dev gcc build-essential libpq-dev -y
+
+<span class="c-comment"># Install Poetry via pip</span>
+<span class="c-keyword">RUN</span> pip install <span class="c-string">"poetry==$POETRY_VERSION"</span>
+
+<span class="c-comment"># Copy dependency files FIRST (before app code)</span>
+<span class="c-comment"># This is a Docker layer caching trick:</span>
+<span class="c-comment"># if pyproject.toml/poetry.lock don't change, Docker reuses</span>
+<span class="c-comment"># the cached "poetry install" layer — much faster rebuilds</span>
+<span class="c-keyword">COPY</span> pyproject.toml /home/user/app/
+<span class="c-keyword">COPY</span> *poetry.lock /home/user/app/
+
+<span class="c-keyword">WORKDIR</span> /home/user/app/
+
+<span class="c-comment"># ╔══════════════════════════════════════════════════╗</span>
+<span class="c-comment"># ║  THE CRITICAL LINE — disables venv creation     ║</span>
+<span class="c-comment"># ║  Packages install directly into system Python   ║</span>
+<span class="c-comment"># ╚══════════════════════════════════════════════════╝</span>
+<span class="c-highlight"><span class="c-keyword">RUN</span> poetry config virtualenvs.create <span class="c-value">false</span></span>
+
+<span class="c-comment"># Install all deps including dev group</span>
+<span class="c-comment"># --no-root: don't try to install the project itself as a package</span>
+<span class="c-comment"># --no-interaction: don't ask questions</span>
+<span class="c-comment"># --no-ansi: clean output in CI/build logs</span>
+<span class="c-highlight"><span class="c-keyword">RUN</span> poetry install --with dev --no-root --no-interaction --no-ansi</span>
+
+<span class="c-comment"># Now copy application code</span>
+<span class="c-comment"># (done after install so code changes don't bust the dep cache)</span>
+<span class="c-keyword">WORKDIR</span> /home/user/app/backend
+<span class="c-keyword">COPY</span> backend/ /home/user/app/backend
+
+<span class="c-comment"># Switch to non-root user</span>
+<span class="c-keyword">USER</span> user
+
+<span class="c-comment"># Start Django via gunicorn with hot-reload for development</span>
+<span class="c-keyword">CMD</span> gunicorn healtech.wsgi --log-file - -b <span class="c-string">0.0.0.0:8000</span> --reload</pre>
+    </div>
+
+    <h3>Why copy pyproject.toml before app code?</h3>
+
+    <div class="flow">
+      <div class="flow-item">
+        <div class="flow-connector">
+          <div class="flow-dot d1">1</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-content">
+          <h5>Docker reads your Dockerfile top-to-bottom</h5>
+          <p>Each instruction creates a new layer. Layers are cached based on content changes.</p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-connector">
+          <div class="flow-dot d2">2</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-content">
+          <h5>COPY pyproject.toml → RUN poetry install</h5>
+          <p>If pyproject.toml and poetry.lock didn't change, Docker uses the cached install layer. This is a multi-minute operation — you don't want to redo it.</p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-connector">
+          <div class="flow-dot d3">3</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-content">
+          <h5>COPY backend/ (app code)</h5>
+          <p>Your Python files change constantly. Placing this after <span class="ic">poetry install</span> means code changes don't invalidate the dependency cache.</p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-connector">
+          <div class="flow-dot d4">4</div>
+        </div>
+        <div class="flow-content">
+          <h5>Result: fast rebuilds</h5>
+          <p>When you edit <span class="ic">views.py</span>, Docker only re-runs the COPY step — not the 3-minute <span class="ic">poetry install</span>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 6: DOCKER COMPOSE -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">06 / Docker Compose</div>
+    <h2>docker-compose.yml — all services</h2>
+
+    <p>The Compose file wires together all services your Django app depends on:</p>
+
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="s-name">db</div>
+        <div class="s-image">postgres:alpine</div>
+        <div class="s-desc">PostgreSQL database. Persisted via named volume.</div>
+      </div>
+      <div class="service-card">
+        <div class="s-name">broker</div>
+        <div class="s-image">rabbitmq:alpine</div>
+        <div class="s-desc">Message broker for Celery tasks.</div>
+      </div>
+      <div class="service-card">
+        <div class="s-name">result</div>
+        <div class="s-image">redis:alpine</div>
+        <div class="s-desc">Celery result backend. Also used by django-defender.</div>
+      </div>
+      <div class="service-card">
+        <div class="s-name">backend</div>
+        <div class="s-image">./backend/Dockerfile</div>
+        <div class="s-desc">Your Django app. Mounts code as volume for live reload.</div>
+      </div>
+      <div class="service-card">
+        <div class="s-name">frontend</div>
+        <div class="s-image">./frontend/Dockerfile</div>
+        <div class="s-desc">Webpack dev server. Serves JS bundles to Django.</div>
+      </div>
+      <div class="service-card">
+        <div class="s-name">celery</div>
+        <div class="s-image">./backend/Dockerfile</div>
+        <div class="s-desc">Same image as backend, different CMD for worker.</div>
+      </div>
+      <div class="service-card">
+        <div class="s-name">mailhog</div>
+        <div class="s-image">mailhog/mailhog</div>
+        <div class="s-desc">Fake SMTP server. Catch all dev emails in browser.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>docker-compose.yml</span>
+        <span class="code-lang">yaml</span>
+      </div>
+      <pre><span class="c-keyword">services:</span>
+
+  <span class="c-comment"># PostgreSQL — persisted via named volume</span>
+  <span class="c-value">db:</span>
+    image: <span class="c-string">"postgres:alpine"</span>
+    environment:
+      - <span class="c-string">POSTGRES_USER=myapp</span>
+      - <span class="c-string">POSTGRES_PASSWORD=password</span>
+      - <span class="c-string">POSTGRES_DB=myapp</span>
+    ports:
+      - <span class="c-string">"5432"</span>    <span class="c-comment"># only exposed to other containers, not the host</span>
+    volumes:
+      - <span class="c-string">dbdata:/var/lib/postgresql/data:delegated</span>
+
+  <span class="c-comment"># RabbitMQ — Celery message broker</span>
+  <span class="c-value">broker:</span>
+    image: <span class="c-string">"rabbitmq:alpine"</span>
+
+  <span class="c-comment"># Redis — Celery result backend + django-defender cache</span>
+  <span class="c-value">result:</span>
+    image: <span class="c-string">"redis:alpine"</span>
+    ports:
+      - <span class="c-string">"6379:6379"</span>
+
+  <span class="c-comment"># Webpack dev server — serves JS bundles to Django template</span>
+  <span class="c-value">frontend:</span>
+    build:
+      dockerfile: <span class="c-string">frontend/Dockerfile</span>
+      context: .
+    volumes:
+      - <span class="c-string">.:/app/</span>
+      - <span class="c-string">/app/node_modules</span>   <span class="c-comment"># anonymous volume: prevents host from overwriting node_modules</span>
+    ports:
+      - <span class="c-string">"3000:3000"</span>
+
+  <span class="c-comment"># Django application</span>
+  <span class="c-value">backend:</span>
+    build:
+      dockerfile: <span class="c-string">backend/Dockerfile</span>
+      context: .              <span class="c-comment"># context is root so Dockerfile can COPY pyproject.toml</span>
+    ports:
+      - <span class="c-string">"8000:8000"</span>
+    volumes:
+      - <span class="c-string">./:/home/user/app/</span>  <span class="c-comment"># mount entire project — enables live code reload</span>
+    env_file: <span class="c-string">backend/.env</span>
+    depends_on:
+      - db
+      - broker
+      - result
+      - frontend
+
+  <span class="c-comment"># Celery worker — same image, different command</span>
+  <span class="c-value">celery:</span>
+    build:
+      dockerfile: <span class="c-string">backend/Dockerfile</span>
+      context: .
+    <span class="c-highlight">command: celery --app=myapp worker --loglevel=info</span>
+    volumes:
+      - <span class="c-string">./:/home/user/app/</span>
+    env_file: <span class="c-string">backend/.env</span>
+    depends_on:
+      - db
+      - broker
+      - result
+
+  <span class="c-comment"># MailHog — catch all emails in dev, no real sending</span>
+  <span class="c-value">mailhog:</span>
+    image: <span class="c-string">mailhog/mailhog</span>
+    ports:
+      - <span class="c-string">'1025:1025'</span>   <span class="c-comment"># SMTP port Django sends to</span>
+      - <span class="c-string">'8025:8025'</span>   <span class="c-comment"># Web UI at http://localhost:8025</span>
+
+<span class="c-keyword">volumes:</span>
+  dbdata:
+    name: <span class="c-string">myapp_dbdata</span>
+    external: <span class="c-value">true</span>  <span class="c-comment"># must create manually: docker volume create myapp_dbdata</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 7: ENV FILE -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">07 / Environment</div>
+    <h2>backend/.env — config & secrets</h2>
+
+    <p>
+      The <span class="ic">.env</span> file is loaded by Docker Compose via <span class="ic">env_file</span>
+      and read inside Django via <span class="ic">python-decouple</span>.
+      It's git-ignored — each developer has their own local copy.
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>backend/.env</span>
+        <span class="code-lang">env</span>
+      </div>
+      <pre><span class="c-comment"># Tell Django which settings module to use</span>
+<span class="c-value">DJANGO_SETTINGS_MODULE</span>=myapp.settings.local
+
+<span class="c-comment"># Celery: use RabbitMQ as broker (preferred over Redis)</span>
+<span class="c-value">CELERY_BROKER_URL</span>=amqp://broker:5672//
+<span class="c-comment"># "broker" is the Docker Compose service name — auto-resolved</span>
+
+<span class="c-comment"># Celery: store task results in Redis</span>
+<span class="c-value">REDIS_URL</span>=redis://result:6379
+<span class="c-comment"># "result" is the Redis service name</span>
+
+<span class="c-comment"># Database — points to the "db" Compose service</span>
+<span class="c-value">DATABASE_URL</span>=postgres://myapp:password@db:5432/myapp
+<span class="c-comment"># format: postgres://USER:PASS@HOST:PORT/DBNAME</span></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">🔑</span>
+      <div class="callout-body">
+        <strong>Service DNS magic:</strong> Inside a Docker Compose network, service names
+        (<span class="ic">db</span>, <span class="ic">broker</span>, <span class="ic">result</span>)
+        resolve as hostnames automatically. Your Django app connects to
+        <span class="ic">db:5432</span> and Docker routes it to the postgres container.
+        No IP addresses needed.
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>backend/.env.example  (commit this one)</span>
+        <span class="code-lang">env</span>
+      </div>
+      <pre>DJANGO_SETTINGS_MODULE=myapp.settings.local
+CELERY_BROKER_URL=amqp://broker:5672//
+REDIS_URL=redis://result:6379
+<span class="c-comment"># Uncomment one:</span>
+<span class="c-comment"># DATABASE_URL=postgres://myapp:password@db:5432/myapp</span>
+<span class="c-comment"># DATABASE_URL=sqlite:///db.sqlite3</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 8: SETUP WORKFLOW -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">08 / Setup Workflow</div>
+    <h2>First-time project setup — step by step</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num active">1</div>
+        <div class="step-content">
+          <h4>Clone the repo & create your .env</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename"><span class="dot"></span>terminal</span>
+              <span class="code-lang">bash</span>
+            </div>
+            <pre>git clone git@github.com:yourorg/myproject.git
+cd myproject
+cp backend/.env.example backend/.env
+<span class="c-comment"># Open .env and uncomment DATABASE_URL=postgres://...</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num active">2</div>
+        <div class="step-content">
+          <h4>Create the external database volume</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename"><span class="dot"></span>terminal</span>
+              <span class="code-lang">bash</span>
+            </div>
+            <pre>docker volume create myapp_dbdata
+<span class="c-comment"># This persists your database across container restarts</span>
+<span class="c-comment"># "external: true" in compose.yml means Compose won't auto-delete it</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num active">3</div>
+        <div class="step-content">
+          <h4>Build the images</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename"><span class="dot"></span>terminal</span>
+              <span class="code-lang">bash</span>
+            </div>
+            <pre>docker compose build --no-cache backend frontend
+<span class="c-comment"># --no-cache: forces clean build, skips any stale layers</span>
+<span class="c-comment"># This is where Poetry downloads and installs all packages</span>
+<span class="c-comment"># First build takes 3–5 minutes, subsequent ones are cached</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num active">4</div>
+        <div class="step-content">
+          <h4>Generate the OpenAPI schema (if using drf-spectacular)</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename"><span class="dot"></span>terminal</span>
+              <span class="code-lang">bash</span>
+            </div>
+            <pre><span class="c-comment"># Run management command inside the backend container (one-shot)</span>
+docker compose run --rm backend python manage.py spectacular \
+  --color --file schema.yml</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num active">5</div>
+        <div class="step-content">
+          <h4>Create migrations and migrate</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename"><span class="dot"></span>terminal</span>
+              <span class="code-lang">bash</span>
+            </div>
+            <pre><span class="c-comment"># Create initial migrations for the users app</span>
+docker compose run --rm backend python manage.py makemigrations
+
+<span class="c-comment"># Apply all migrations to the database</span>
+docker compose run --rm backend python manage.py migrate</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num active">6</div>
+        <div class="step-content">
+          <h4>Start all services</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename"><span class="dot"></span>terminal</span>
+              <span class="code-lang">bash</span>
+            </div>
+            <pre>docker compose up -d
+<span class="c-comment"># -d: detached mode (runs in background)</span>
+
+<span class="c-comment"># Access your app at:</span>
+<span class="c-comment"># Django:   http://localhost:8000</span>
+<span class="c-comment"># MailHog:  http://localhost:8025</span>
+<span class="c-comment"># Redis:    localhost:6379</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 9: DAY-TO-DAY COMMANDS -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">09 / Daily Commands</div>
+    <h2>Day-to-day development workflow</h2>
+
+    <h3>Running management commands</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>management commands</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="c-comment"># Make migrations after editing models</span>
+docker compose run --rm backend python manage.py makemigrations
+
+<span class="c-comment"># Apply migrations</span>
+docker compose run --rm backend python manage.py migrate
+
+<span class="c-comment"># Create a superuser</span>
+docker compose run --rm backend python manage.py createsuperuser
+
+<span class="c-comment"># Collect static files</span>
+docker compose run --rm backend python manage.py collectstatic --noinput
+
+<span class="c-comment"># Open Django shell</span>
+docker compose run --rm backend python manage.py shell
+
+<span class="c-comment"># The Makefile shortcuts (from the HealTech project)</span>
+make docker_makemigrations
+make docker_migrate
+make docker_backend_shell</pre>
+    </div>
+
+    <h3>Running tests</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>testing</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="c-comment"># Run all tests</span>
+docker compose run --rm backend python manage.py test
+
+<span class="c-comment"># Run a specific test file</span>
+docker compose run --rm backend python manage.py test users.tests.test_views
+
+<span class="c-comment"># Run with parallel execution + keep DB between runs (faster)</span>
+docker compose run --rm backend python manage.py test --parallel --keepdb
+
+<span class="c-comment"># Run with coverage (ruff linter is also installed in dev group)</span>
+docker compose run --rm backend coverage run manage.py test</pre>
+    </div>
+
+    <h3>Logs & debugging</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>logs & shell access</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="c-comment"># Stream logs from all services</span>
+docker compose logs -f
+
+<span class="c-comment"># Stream logs from one service only</span>
+docker compose logs -f backend
+docker compose logs -f celery
+
+<span class="c-comment"># Open a bash shell inside the running backend container</span>
+docker compose exec backend bash
+
+<span class="c-comment"># Or run a one-off bash shell</span>
+docker compose run --rm backend bash
+
+<span class="c-comment"># Inside the shell, Poetry commands work normally:</span>
+poetry show            <span class="c-comment"># list installed packages</span>
+poetry add requests    <span class="c-comment"># add a new package (rebuilds needed after)</span>
+python -c "import django; print(django.__version__)"</pre>
+    </div>
+
+    <h3>Adding a new Python dependency</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>adding dependencies</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="c-comment"># 1. Open a shell inside the backend container</span>
+docker compose run --rm backend bash
+
+<span class="c-comment"># 2. Inside the container, add the dependency</span>
+poetry add requests
+
+<span class="c-comment"># 3. Exit the shell</span>
+exit
+
+<span class="c-comment"># 4. Rebuild containers to install the new package into the image</span>
+docker compose down
+docker compose up -d --build
+
+<span class="c-comment"># ─── OR use the Makefile shortcut ───────────────────</span>
+make docker_update_dependencies</pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <strong>Important:</strong> When you add a dependency with <span class="ic">poetry add</span>
+        inside a container, it updates <span class="ic">pyproject.toml</span> and
+        <span class="ic">poetry.lock</span> on your host (because the project directory is volume-mounted).
+        But other containers won't have the new package until you rebuild with
+        <span class="ic">docker compose up --build</span>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 10: PROS/CONS -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">10 / Trade-offs</div>
+    <h2>Pros and cons of this approach</h2>
+
+    <div class="pros-cons">
+      <div class="pros">
+        <h4>✓ Pros</h4>
+        <ul>
+          <li>No <span class="ic">source .venv/bin/activate</span> ceremony ever</li>
+          <li>Poetry handles dev/prod dependency groups cleanly</li>
+          <li>Exact lock file means 100% reproducible builds across machines and CI</li>
+          <li>New developer onboarding is just <span class="ic">docker compose up</span></li>
+          <li>All services (DB, Redis, RabbitMQ, MailHog) spin up together</li>
+          <li>postgres, redis versions pinned — no "works on my machine"</li>
+          <li>Running <span class="ic">python manage.py</span> feels natural inside container</li>
+          <li>Same image runs in CI/CD — eliminates environment drift</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <h4>✕ Cons</h4>
+        <ul>
+          <li>Rebuild required after every dependency change</li>
+          <li>First build is slow (3–5 min) until caches warm up</li>
+          <li>File system performance on WSL2 volume mounts can be sluggish</li>
+          <li>Every command is prefixed with <span class="ic">docker compose run --rm backend</span></li>
+          <li>Debugging is harder — extra indirection to get inside the container</li>
+          <li>No IDE autocomplete without pointing IDE at container Python</li>
+          <li>Poetry itself runs inside container — can't use it from host directly</li>
+          <li>Docker must be running before any work starts</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 11: WHEN TO CHOOSE -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">11 / Decision</div>
+    <h2>When to choose this approach</h2>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div class="callout-body">
+        <strong>Choose this when:</strong> You're building a real product with a team.
+        Your project has multiple services (Django + Postgres + Redis + Celery + RabbitMQ).
+        You want the local dev environment to mirror production as closely as possible.
+        Team members have different OS setups (WSL, macOS, Linux). CI/CD runs the same image.
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">✕</span>
+      <div class="callout-body">
+        <strong>Don't choose this when:</strong> You're learning Django for the first time.
+        You're building a quick proof-of-concept that'll be thrown away.
+        You work alone on a laptop where the friction isn't justified.
+        Docker Desktop is unavailable or restricted.
+      </div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">🎯</span>
+      <div class="callout-body">
+        <strong>Real-world fit:</strong> This is exactly what projects like
+        <strong>HealTech v2</strong> and <strong>MediCore</strong> need.
+        7-service architectures with RabbitMQ, Redis, and multiple Django workers benefit
+        enormously from <span class="ic">docker compose up</span> being the only setup command.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 12: QUICK REFERENCE -->
+<div class="section">
+  <div class="container">
+    <div class="section-num">12 / Quick Reference</div>
+    <h2>Command cheat sheet</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename"><span class="dot"></span>all commands at a glance</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="c-comment">## ── SETUP ──────────────────────────────────────</span>
+docker volume create myapp_dbdata            <span class="c-comment"># once</span>
+docker compose build --no-cache backend      <span class="c-comment"># first build</span>
+docker compose run --rm backend python manage.py migrate
+docker compose up -d                         <span class="c-comment"># start everything</span>
+
+<span class="c-comment">## ── DAILY ──────────────────────────────────────</span>
+docker compose up -d                         <span class="c-comment"># start</span>
+docker compose down                          <span class="c-comment"># stop</span>
+docker compose logs -f backend               <span class="c-comment"># live logs</span>
+docker compose exec backend bash             <span class="c-comment"># shell in running container</span>
+
+<span class="c-comment">## ── DJANGO ─────────────────────────────────────</span>
+docker compose run --rm backend python manage.py makemigrations
+docker compose run --rm backend python manage.py migrate
+docker compose run --rm backend python manage.py createsuperuser
+docker compose run --rm backend python manage.py shell
+docker compose run --rm backend python manage.py test --parallel --keepdb
+
+<span class="c-comment">## ── DEPENDENCIES ───────────────────────────────</span>
+docker compose run --rm backend bash         <span class="c-comment"># open shell</span>
+poetry add &lt;package&gt;                         <span class="c-comment"># inside shell</span>
+exit
+docker compose up -d --build                 <span class="c-comment"># rebuild with new dep</span>
+
+<span class="c-comment">## ── REBUILD ─────────────────────────────────────</span>
+docker compose down
+docker compose up -d --build                 <span class="c-comment"># rebuild all changed images</span>
+docker compose build --no-cache backend      <span class="c-comment"># force clean rebuild</span>
+
+<span class="c-comment">## ── TROUBLESHOOTING ────────────────────────────</span>
+docker compose ps                            <span class="c-comment"># see all container states</span>
+docker system prune -f                       <span class="c-comment"># clean dangling images/containers</span>
+docker volume ls                             <span class="c-comment"># list volumes</span>
+docker compose run --rm backend python -c "import django; print(django.__version__)"</pre>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Docker + Poetry (No venv) — Approach 4 Variant Guide &nbsp;·&nbsp;
+  Based on vintasoftware/django-react-boilerplate pattern
+</div>
+
+</body>
+</html>
